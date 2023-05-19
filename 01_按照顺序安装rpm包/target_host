@@ -1,0 +1,5 @@
+[all:vars]
+az='zone_01'
+
+[target_host]
+106.75.230.211

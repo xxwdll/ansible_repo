@@ -1,0 +1,36 @@
+---
+  # role_path 是 ansible 自带的环境变量 代表当前roles的根路径
+  - name: judge file is exist
+    fail: msg="{{ role_path }}/files/{{ az }} is not exist"
+    when: ((role_path+"/files/"+az) is not exists) or ((role_path+"/files/"+az+"/rpms") is not exists)
+
+  - name: copy files
+    copy: src={{ item.src }} dest={{ item.dest }} mode=0755
+    with_items:
+      - { src: "files/{{ az }}/rpms", dest: /root/}
+  
+  # 获取远程目录列表
+  # 方法一 不太好 rpm包安装有顺序要求 没法满足
+  - name: Get rpms files on remote machine
+    find:
+      paths: /root/rpms
+    register: rpm_path_list
+  
+  - debug:
+      msg: "{{ item.path }}"
+    with_items: "{{ rpm_path_list.files }}"
+  
+  # 方法二 打上前缀可以满足顺序要求
+  - name: remote file list
+    command: ls -v /root/rpms
+    register: rpm_list
+
+  - debug: msg={{ rpm_list.stdout_lines }}
+
+  ## 安装rpm包
+  - name: install rpms
+    shell: rpm -ivh --force --nodeps /root/rpms/{{ item }}
+    loop: "{{ rpm_list.stdout_lines }}"
+
+  - name: delete files
+    shell: rm -f /root/rpms/*
